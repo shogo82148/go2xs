@@ -48,6 +48,8 @@ func (g *Generator) Output(name string) {
 	ioutil.WriteFile("Makefile.PL", []byte(`use 5.010000;
 use ExtUtils::MakeMaker;
 
+local $ENV{CGO_CFLAGS}=`+"`"+`perl -MExtUtils::Embed -e ccopts`+"`"+`;
+local $ENV{CGO_LDFLAGS}=`+"`"+`perl -MExtUtils::Embed -e ldopts`+"`"+`;
 system("go build -buildmode=c-shared -o lib`+name+`.dylib *.go") and die;
 
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
@@ -108,6 +110,10 @@ Ichinose Shogo, E<lt>shogo@localE<gt>
 	fmt.Fprint(goFile, `package main
 
 import "C"
+
+import "unsafe"
+
+var _ unsafe.Pointer
 
 func main() {}
 `)

@@ -165,7 +165,7 @@ func (fg *FuncGenerator) addParam(index int, param *ast.Field) {
 		case "float64":
 			fg.addParamPrimitive(index, "float64", "GoFloat64", "SvNV")
 		case "string":
-			return
+			fg.addParamString(index)
 		}
 	}
 }
@@ -176,6 +176,16 @@ func (fg *FuncGenerator) addParamPrimitive(index int, goType, xsType, svType str
 	fg.goParams = append(fg.goParams, fmt.Sprintf("param%d", index))
 	fg.xsParams = append(fg.xsParams, fmt.Sprintf("param%d", index))
 	fmt.Fprintf(fg.xsBefore, "%s param%d = (%s)%s(ST(%d));\n", xsType, index, xsType, svType, index)
+}
+
+func (fg *FuncGenerator) addParamString(index int) {
+	fg.goGlueParamDecls = append(fg.goGlueParamDecls, fmt.Sprintf("param%dPtr *C.char", index), fmt.Sprintf("param%dLen C.int", index))
+	fg.goParams = append(fg.goParams, fmt.Sprintf("param%d", index))
+	fg.xsParams = append(fg.xsParams, fmt.Sprintf("param%dPtr", index), fmt.Sprintf("param%dLen", index))
+	fmt.Fprintf(fg.goBefore, "param%d := C.GoStringN(param%dPtr, param%dLen)\n", index, index, index)
+	fmt.Fprintf(fg.xsBefore, "STRLEN param%dStrlen;\n", index)
+	fmt.Fprintf(fg.xsBefore, "char* param%dPtr = SvPV(ST(%d), param%dStrlen);\n", index, index, index)
+	fmt.Fprintf(fg.xsBefore, "int param%dLen = (int)param%dStrlen;\n", index, index)
 }
 
 func (fg *FuncGenerator) addResult(index int, result *ast.Field) {
@@ -206,7 +216,7 @@ func (fg *FuncGenerator) addResult(index int, result *ast.Field) {
 		case "float64":
 			fg.addResultPrimitive(index, "float64", "GoFloat64", "newSVnv")
 		case "string":
-			return
+			fg.addResultString(index)
 		}
 	}
 }
@@ -218,5 +228,17 @@ func (fg *FuncGenerator) addResultPrimitive(index int, goType, xsType, svType st
 	fmt.Fprintf(fg.goAfter, "result%d = goresult%d\n", index, index)
 	fmt.Fprintf(fg.xsBefore, "%s result%d;\n", xsType, index)
 	fmt.Fprintf(fg.xsAfter, "XPUSHs(sv_2mortal(%s(result%d)));\n", svType, index)
+	fg.numXsReturn++
+}
+
+func (fg *FuncGenerator) addResultString(index int) {
+	fg.goGlueResultDecls = append(fg.goGlueResultDecls, fmt.Sprintf("result%dPtr *C.char", index), fmt.Sprintf("result%dLen C.int", index))
+	fg.goResults = append(fg.goResults, fmt.Sprintf("goresult%d", index))
+	fg.xsResults = append(fg.xsResults, fmt.Sprintf("result%dPtr", index), fmt.Sprintf("result%dLen", index))
+	fmt.Fprintf(fg.goAfter, "result%dPtr = C.CString(goresult%d)\n", index, index)
+	fmt.Fprintf(fg.goAfter, "result%dLen = C.int(len(goresult%d))\n", index, index)
+	fmt.Fprintf(fg.xsBefore, "char* result%dPtr;\n", index)
+	fmt.Fprintf(fg.xsBefore, "int result%dLen;\n", index)
+	fmt.Fprintf(fg.xsAfter, "XPUSHs(sv_2mortal(newSVpvn(result%dPtr, result%dLen)));\n", index, index)
 	fg.numXsReturn++
 }
