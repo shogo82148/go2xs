@@ -48,7 +48,10 @@ func (g *Generator) Output(name string) {
 	ioutil.WriteFile("Makefile.PL", []byte(`use 5.010000;
 use ExtUtils::MakeMaker;
 
-system("go build -buildmode=c-shared -o lib`+name+`.dylib *.go") and die;
+my $ext;
+$ext = "dylib" if $^O eq 'darwin';
+$ext = "so" if $^O eq 'linux';
+system("go build -buildmode=c-shared -o lib`+name+`.$ext *.go") and die;
 
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
