@@ -1,4 +1,4 @@
-package main
+package go2xs
 
 var ppport = `#if 0
 <<'SKIP';
